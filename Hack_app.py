@@ -1,15 +1,16 @@
+import datetime
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter, A4
-from dbutils import getDiseases, init
+from dbutils import getDiseases, init, destroy
 from classifier import classifier
+import os
+from mail_bot import send_mail
 
 
 class Main_Window(Gtk.Window):
-
-
 
     def __init__(self):
         #WINDOW DESCRIPTION
@@ -34,17 +35,14 @@ class Main_Window(Gtk.Window):
         file_menu = Gtk.Menu()
         file_menu_dropdown = Gtk.MenuItem("File")
 
-        file_new = Gtk.MenuItem("New")
         file_save = Gtk.MenuItem("Save")
         file_exit = Gtk.MenuItem("Exit")
 
         file_exit.connect("activate", Gtk.main_quit)
         file_save.connect("activate", self.save_file)
-        file_new.connect("activate", self.new_file)
 
         file_menu_dropdown.set_submenu(file_menu)
 
-        file_menu.append(file_new)
         file_menu.append(file_save)
         file_menu.append(Gtk.SeparatorMenuItem())
         file_menu.append(file_exit)
@@ -126,17 +124,13 @@ class Main_Window(Gtk.Window):
         completion4 = Gtk.EntryCompletion()
         completion5 = Gtk.EntryCompletion()
         self.liststore = Gtk.ListStore(str)
-        problems = []
+        self.problems = []
         with open("sym.txt") as filename:
             for line in filename:
-                problems.append(line.strip('\n'))
+                self.problems.append(line.strip('\n'))
 
-        for text in problems:
+        for text in self.problems:
             self.liststore.append([text])
-
-        problems.remove('')
-        self.treeview = Gtk.TreeView(self.liststore)
-
 
         completion1.set_model(self.liststore)
         completion2.set_model(self.liststore)
@@ -149,52 +143,17 @@ class Main_Window(Gtk.Window):
         completion4.set_text_column(0)
         completion5.set_text_column(0)
 
+
+
         self.symptom1.set_completion(completion1)
         self.symptom2.set_completion(completion2)
         self.symptom3.set_completion(completion3)
         self.symptom4.set_completion(completion4)
         self.symptom5.set_completion(completion5)
 
-        # if len(self.symptom1.get_text()) != 0:
-        #     for i in problems:
-        #         if self.symptom1.get_text() != i:
-        #             dialog_entry_error = Error(self)
-        #             response = dialog_entry_error.run()
-        #             dialog_entry_error.destroy()
-        #             break
-        #
-        # if len(self.symptom2.get_text()) != 0:
-        #     for i in problems:
-        #         if self.symptom2.get_text() != i:
-        #             dialog_entry_error = Error(self)
-        #             response = dialog_entry_error.run()
-        #             dialog_entry_error.destroy()
-        #             break
-        #
-        # if len(self.symptom3.get_text()) != 0:
-        #     for i in problems:
-        #         if self.symptom3.get_text() != i:
-        #             dialog_entry_error = Error(self)
-        #             response = dialog_entry_error.run()
-        #             dialog_entry_error.destroy()
-        #             break
-        #
-        #
-        # if len(self.symptom4.get_text()) != 0:
-        #     for i in problems:
-        #         if self.symptom4.get_text() != i:
-        #             dialog_entry_error = Error(self)
-        #             response = dialog_entry_error.run()
-        #             dialog_entry_error.destroy()
-        #             break
-        #
-        # if len(self.symptom5.get_text()) != 0:
-        #     for i in problems:
-        #         if self.symptom5.get_text() != i:
-        #             dialog_entry_error = Error(self)
-        #             response = dialog_entry_error.run()
-        #             dialog_entry_error.destroy()
-        #             break
+
+
+
 
 
         #SUBMIT BUTTON
@@ -210,6 +169,28 @@ class Main_Window(Gtk.Window):
 
 
     def submit_clicked(self, widget):
+
+        if len(self.name.get_text()) == 0 or len(self.age.get_text()) == 0 or len(self.address.get_text()) == 0 or len(self.number.get_text()) == 0:
+            dialog_details = Details(self)
+            response = dialog_details.run()
+
+            dialog_details.destroy()
+            return
+
+        try:
+
+            pqr=int(self.age.get_text())
+            abc = int(self.number.get_text())
+            if(pqr<0 or pqr>120):
+                pqr = (int)("abc")
+            if(len(str(abc))!=10 and abc > 0):
+                abc = (int)("pqr")
+        except Exception as e:
+            dialog_number = Number(self)
+            response = dialog_number.run()
+            dialog_number.destroy()
+            return
+
         if(len(self.symptom1.get_text()) == 0 or len(self.symptom2.get_text()) == 0):
             dialog_error = PopUp(self)
             response = dialog_error.run()
@@ -217,8 +198,69 @@ class Main_Window(Gtk.Window):
             dialog_error.destroy()
             return
 
+        if len(self.symptom1.get_text()) != 0:
+            if self.symptom1.get_text() not in self.problems:
+                print(self.symptom1.get_text())
+                print(self.liststore)
+                dialog_entry_error = Error(self)
+                response = dialog_entry_error.run()
+                dialog_entry_error.destroy()
+                return
+        if len(self.symptom2.get_text()) != 0:
+            if self.symptom2.get_text() not in self.problems:
+                dialog_entry_error = Error(self)
+                response = dialog_entry_error.run()
+                dialog_entry_error.destroy()
+                return
+        if len(self.symptom3.get_text()) != 0:
+            if self.symptom3.get_text() not in self.problems:
+                dialog_entry_error = Error(self)
+                response = dialog_entry_error.run()
+                dialog_entry_error.destroy()
+                return
+
+
+        if len(self.symptom4.get_text()) != 0:
+            if self.symptom4.get_text() not in self.problems:
+                dialog_entry_error = Error(self)
+                response = dialog_entry_error.run()
+                dialog_entry_error.destroy()
+                return
+
+        if len(self.symptom5.get_text()) != 0:
+            if self.symptom5.get_text() not in self.problems:
+                dialog_entry_error = Error(self)
+                response = dialog_entry_error.run()
+                dialog_entry_error.destroy()
+                return
+
+        if self.symptom2.get_text() == self.symptom1.get_text() and len(self.symptom2.get_text())>0:
+            dialog_same = Same(self)
+            response = dialog_same.run()
+            dialog_same.destroy()
+            return
+
+        if (self.symptom3.get_text() == self.symptom1.get_text() or self.symptom3.get_text() == self.symptom2.get_text()) and  len(self.symptom3.get_text())>0:
+            dialog_same = Same(self)
+            response = dialog_same.run()
+            dialog_same.destroy()
+            return
+
+        if (self.symptom4.get_text() == self.symptom1.get_text() or self.symptom4.get_text() == self.symptom2.get_text() or self.symptom4.get_text() == self.symptom3.get_text()) and len(self.symptom4.get_text())>0:
+            dialog_same = Same(self)
+            response = dialog_same.run()
+            dialog_same.destroy()
+            return
+
+        if (self.symptom5.get_text() == self.symptom1.get_text() or self.symptom5.get_text() == self.symptom2.get_text() or self.symptom5.get_text() == self.symptom3.get_text() or self.symptom5.get_text() == self.symptom4.get_text()) and len(self.symptom5.get_text())>0:
+            dialog_same = Same(self)
+            response = dialog_same.run()
+            dialog_same.destroy()
+            return
+
         list = []
-        list.append([self.symptom1.get_text(), self.symptom2.get_text()])
+        list.append(self.symptom1.get_text())
+        list.append(self.symptom2.get_text())
         if(len(self.symptom3.get_text())>0):
             list.append(self.symptom3.get_text())
         if (len(self.symptom4.get_text()) > 0):
@@ -228,123 +270,125 @@ class Main_Window(Gtk.Window):
 
         #DISEASE SELECTION USING CLASSIFIER
 
-        init()
+        db_client = init()
         all_Diseases = getDiseases(list)
-
         self.disease = classifier(all_Diseases, list)
+
+        destroy(db_client)
 
         dialog_answer = Answer(self, self.disease)
         response = dialog_answer.run()
-
+        self.save_file(response)
         dialog_answer.destroy()
 
+        time = str(datetime.datetime.now())
+        time = time.split(' ')
+
+        date = time[0].split('-')
+        date = date[2] + "-" + date[1] + "-" + date[0]
+        time = time[1][:len(time[1]) - 7]
+
+        try:
+            send_mail(self.name.get_text(), date, time, self.name.get_text()+"_"+date+"_"+time+".pdf")
+
+            dialog_mail_sent = Mail(self)
+            response = dialog_mail_sent.run()
+            dialog_mail_sent.destroy()
+
+        except Exception as e:
+
+            dialog_mail_error = Mail_error(self)
+            response = dialog_mail_error.run()
+            dialog_mail_error.destroy()
 
 
-
-
-
-
-    def new_file(self, widget):
-        #TODO IMPROVEMENT
-
-        open("Hack_app.py")
+        filep = './Reports/' + self.name.get_text()+"_"+date+"_"+time+".pdf"
+        os.system('/usr/bin/xdg-open '+filep)
+        self.name.set_text('')
+        self.age.set_text('')
+        self.address.set_text('')
+        self.number.set_text('')
+        self.symptom3.set_text('')
+        self.symptom2.set_text('')
+        self.symptom1.set_text('')
+        self.symptom5.set_text('')
+        self.symptom4.set_text('')
 
 
     def save_file(self, widget):
-        c = canvas.Canvas(self.name.get_text(), pagesize=A4)
+        time = str(datetime.datetime.now())
+        time = time.split(' ')
 
+        date = time[0].split('-')
+        date = date[2] + "-" + date[1] + "-" + date[0]
+        time = time[1][:len(time[1]) - 7]
+        filepath = os.getcwd()
+        if not os.path.exists(filepath + "/Reports"):
+            os.mkdir(filepath + "/Reports")
+        c = canvas.Canvas(filepath + "/Reports/"+self.name.get_text()+"_"+date+"_"+time+".pdf", pagesize=A4)
         c.setFont('Helvetica', 20, leading=None)
         c.drawString(240, 810, "Patient's Details")
+        c.setFont('Helvetica', 18, leading=None)
+        c.drawString(5, 810, date)
+        c.drawString(510, 810, time)
         c.setFont('Helvetica', 16, leading = None)
         c.drawString(5, 750, "Name : ")
         c.setFont('Helvetica', 16, leading = None)
-        c.drawString(70, 750, self.name.get_text())
+        c.drawString(90, 750, self.name.get_text())
         c.setFont('Helvetica', 16, leading=None)
         c.drawString(5, 710, "Age : ")
         c.setFont('Helvetica', 16, leading=None)
-        c.drawString(70,710, self.age.get_text())
+        c.drawString(90,710, self.age.get_text())
+
+        c.setFont('Helvetica', 16, leading=None)
+        c.drawString(5, 670, "Address : ")
+        c.setFont('Helvetica', 16, leading=None)
+        c.drawString(90, 670, self.address.get_text())
+        c.setFont('Helvetica', 16, leading=None)
+        c.drawString(5, 630, "Number : ")
+        c.setFont('Helvetica', 16, leading=None)
+        c.drawString(90, 630, self.number.get_text())
+
+
         c.setFont('Helvetica', 20, leading=None)
-        c.drawString(270, 650, "Symptoms")
+        c.drawString(270, 570, "Symptoms")
         c.setFont('Helvetica', 16, leading=None)
-        c.drawString(5, 590, "1. ")
+        c.drawString(5, 530, "1. ")
         c.setFont('Helvetica', 16, leading=None)
-        c.drawString(20, 590, self.symptom1.get_text())
+        c.drawString(20, 530, self.symptom1.get_text())
         c.setFont('Helvetica', 16, leading=None)
-        c.drawString(5, 550, "2. ")
+        c.drawString(5, 490, "2. ")
         c.setFont('Helvetica', 16, leading=None)
-        c.drawString(20, 550, self.symptom2.get_text())
+        c.drawString(20, 490, self.symptom2.get_text())
 
         optional_symptoms = 0
 
         if len(self.symptom3.get_text()) > 0:
             optional_symptoms = optional_symptoms + 1
             c.setFont('Helvetica', 16, leading=None)
-            c.drawString(5, 510, "3. ")
+            c.drawString(5, 490-optional_symptoms*40, str(2+optional_symptoms)+".")
             c.setFont('Helvetica', 16, leading=None)
-            c.drawString(20, 510, self.symptom3.get_text())
+            c.drawString(20, 490-optional_symptoms*40, self.symptom3.get_text())
         if len(self.symptom4.get_text()) > 0:
             optional_symptoms = optional_symptoms + 1
             c.setFont('Helvetica', 16, leading=None)
-            c.drawString(5, 470, "4. ")
+            c.drawString(5, 490-optional_symptoms*40, str(2+optional_symptoms)+".")
             c.setFont('Helvetica', 16, leading=None)
-            c.drawString(20, 470, self.symptom4.get_text())
+            c.drawString(20, 490-optional_symptoms*40, self.symptom4.get_text())
         if len(self.symptom5.get_text()) > 0:
             optional_symptoms = optional_symptoms + 1
             c.setFont('Helvetica', 16, leading=None)
-            c.drawString(5,430, "5. ")
+            c.drawString(5,490-optional_symptoms*40, str(2+optional_symptoms)+".")
             c.setFont('Helvetica', 16, leading=None)
-            c.drawString(20, 430, self.symptom5.get_text())
+            c.drawString(20, 490-optional_symptoms*40, self.symptom5.get_text())
 
         c.setFont('Helvetica', 20, leading=None)
-        y = 550-60-40*optional_symptoms
+        y = 490-60-40*optional_symptoms
         c.drawString(275, y, "Disease")
         c.setFont('Helvetica', 16, leading=None)
-        c.drawString(5, y-60, "The Patient is suffering from "+self.disease)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        # if len(self.symptom3.get_text()) != 0:
-        #     c.setFont('Helvetica', 16, leading=None)
-        #     c.drawString(5, 510, "3. ")
-        #     c.setFont('Helvetica', 16, leading=None)
-        #     c.drawString(20, 510, self.symptom3.get_text())
-        # if len(self.symptom4.get_text()) != 0:
-        #     c.setFont('Helvetica', 16, leading=None)
-        #     c.drawString(5, 470, "4. ")
-        #     c.setFont('Helvetica', 16, leading=None)
-        #     c.drawString(20, 470, self.symptom4.get_text())
-        # if len(self.symptom5.get_text()) != 0:
-        #     c.setFont('Helvetica', 16, leading=None)
-        #     c.drawString(5,430, "5. ")
-        #     c.setFont('Helvetica', 16, leading=None)
-        #     c.drawString(20, 430, self.symptom5.get_text())
-
+        c.drawString(160, y-60, "The Patient is suffering from "+self.disease)
         c.showPage()
         c.save()
-
-
-
-
-
-
 
 class PopUp(Gtk.Dialog):
 
@@ -353,7 +397,7 @@ class PopUp(Gtk.Dialog):
         Gtk.Dialog.__init__(self, "Error", parent, Gtk.DialogFlags.MODAL, (Gtk.STOCK_OK, Gtk.ResponseType.OK))
         self.set_default_size(100, 50)
         self.set_border_width(20)
-
+        self.set_position(Gtk.WindowPosition.CENTER)
         area = self.get_content_area()
         area.add(Gtk.Label("Atleast Two Symptoms are required."))
         self.show_all()
@@ -370,6 +414,7 @@ class Answer(Gtk.Dialog):
         Gtk.Dialog.__init__(self, "Disease", parent, Gtk.DialogFlags.MODAL, (Gtk.STOCK_OK, Gtk.ResponseType.OK))
         self.set_default_size(100,50)
         self.set_border_width(20)
+        self.set_position(Gtk.WindowPosition.CENTER)
         self.disease = disease
         area = self.get_content_area()
         area.add(Gtk.Label("The Possible Disease Patient is suffering from is " + self.disease))
@@ -384,24 +429,79 @@ class Error(Gtk.Dialog):
         Gtk.Dialog.__init__(self, "Error", parent, Gtk.DialogFlags.MODAL, (Gtk.STOCK_OK, Gtk.ResponseType.OK))
         self.set_default_size(100, 50)
         self.set_border_width(20)
+        self.set_position(Gtk.WindowPosition.CENTER)
         area = self.get_content_area()
-        area.add(Gtk.Label("The Entered Symptom is Wrong."))
+        area.add(Gtk.Label("You have entered one or more wrong symptoms"))
+        self.show_all()
+
+
+class Same(Gtk.Dialog):
+
+    def __init__(self, parent):
+
+        Gtk.Dialog.__init__(self, "Error", parent, Gtk.DialogFlags.MODAL, (Gtk.STOCK_OK, Gtk.ResponseType.OK))
+        self.set_default_size(130, 80)
+        self.set_border_width(20)
+        self.set_position(Gtk.WindowPosition.CENTER)
+        area = self.get_content_area()
+        area.add(Gtk.Label("Repeated Symptom(s)"))
+        self.show_all()
+
+class Details(Gtk.Dialog):
+
+    def __init__(self, parent):
+
+        Gtk.Dialog.__init__(self, "Error", parent, Gtk.DialogFlags.MODAL, (Gtk.STOCK_OK, Gtk.ResponseType.OK))
+        self.set_default_size(130, 80)
+        self.set_border_width(20)
+        self.set_position(Gtk.WindowPosition.CENTER)
+        area = self.get_content_area()
+        area.add(Gtk.Label("Please enter Patient's details"))
+        self.show_all()
+
+class Number(Gtk.Dialog):
+
+    def __init__(self, parent):
+
+        Gtk.Dialog.__init__(self, "Error", parent, Gtk.DialogFlags.MODAL, (Gtk.STOCK_OK, Gtk.ResponseType.OK))
+        self.set_default_size(130, 80)
+        self.set_border_width(20)
+        self.set_position(Gtk.WindowPosition.CENTER)
+        area = self.get_content_area()
+        area.add(Gtk.Label("Invalid Age or Phone number"))
+        self.show_all()
+
+
+class Mail(Gtk.Dialog):
+
+    def __init__(self, parent):
+
+        Gtk.Dialog.__init__(self, "Mail Sent", parent, Gtk.DialogFlags.MODAL, (Gtk.STOCK_OK, Gtk.ResponseType.OK))
+        self.set_default_size(130, 80)
+        self.set_border_width(20)
+        self.set_position(Gtk.WindowPosition.CENTER)
+        area = self.get_content_area()
+        area.add(Gtk.Label("The Mail has been sent"))
+        self.show_all()
+
+
+class Mail_error(Gtk.Dialog):
+
+    def __init__(self, parent):
+
+        Gtk.Dialog.__init__(self, "Error", parent, Gtk.DialogFlags.MODAL, (Gtk.STOCK_OK, Gtk.ResponseType.OK))
+        self.set_default_size(130, 80)
+        self.set_border_width(20)
+        self.set_position(Gtk.WindowPosition.CENTER)
+        area = self.get_content_area()
+        area.add(Gtk.Label("The report couldn't be mailed to the doctor"))
         self.show_all()
 
 
 
 
-
-
-
-
-
-
-
-
-
-
 window = Main_Window()
+window.set_position(Gtk.WindowPosition.CENTER)
 window.connect("delete-event", Gtk.main_quit)
 window.show_all()
 Gtk.main()
